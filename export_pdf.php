@@ -73,7 +73,7 @@ if($r_head = mysqli_fetch_assoc($q_head)){
         }
         
         .text-center { text-align: center; } 
-        .text-right { text-align: right; }
+        .text-right { text-align: right; white-space: nowrap; }
         .fw-bold { font-weight: bold; }
         
         /* Mengatur agar kontainer lampiran benar-benar full satu halaman */
@@ -122,10 +122,10 @@ if($r_head = mysqli_fetch_assoc($q_head)){
             <tr>
                 <th width="5%">NO</th>
                 <th width="15%">TANGGAL</th>
-                <th width="40%">KETERANGAN</th>
-                <th width="13%">DEBET</th>
-                <th width="13%">KREDIT</th>
-                <th width="14%">SALDO</th>
+                <th width="35%">KETERANGAN</th>
+                <th width="15%">DEBET</th>
+                <th width="15%">KREDIT</th>
+                <th width="15%">SALDO</th>
             </tr>
         </thead>
         <tbody>
@@ -136,22 +136,31 @@ if($r_head = mysqli_fetch_assoc($q_head)){
                 $total_debet += $row['debet'];
                 $total_kredit += $row['kredit'];
 
+                // Penambahan format "Rp. "
+                $val_debet = ($row['debet'] == 0) ? '-' : 'Rp. ' . number_format($row['debet'],0,',','.');
+                $val_kredit = ($row['kredit'] == 0) ? '-' : 'Rp. ' . number_format($row['kredit'],0,',','.');
+                $val_saldo = 'Rp. ' . number_format($row['saldo'],0,',','.');
+
                 echo "<tr>
                     <td class='text-center'>".$no++."</td>
                     <td class='text-center'>".date('d-m-Y', strtotime($row['tanggal']))."</td>
                     <td>".htmlspecialchars($row['keterangan'])."</td>
-                    <td class='text-right'>".number_format($row['debet'],0,',','.')."</td>
-                    <td class='text-right'>".number_format($row['kredit'],0,',','.')."</td>
-                    <td class='text-right fw-bold'>".number_format($row['saldo'],0,',','.')."</td>
+                    <td class='text-right'>".$val_debet."</td>
+                    <td class='text-right'>".$val_kredit."</td>
+                    <td class='text-right fw-bold'>".$val_saldo."</td>
                 </tr>";
             }
+            
             $total_saldo = $total_debet - $total_kredit;
+            $disp_debet = ($total_debet == 0) ? "Rp. 0" : 'Rp. ' . number_format($total_debet,0,',','.');
+            $disp_kredit = ($total_kredit == 0) ? "Rp. 0" : 'Rp. ' . number_format($total_kredit,0,',','.');
+            $disp_saldo = ($total_saldo == 0) ? "Rp. 0" : 'Rp. ' . number_format($total_saldo,0,',','.');
             ?>
             <tr style="background-color: #f9f9f9; font-weight: bold;">
                 <td colspan="3" class="text-center">TOTAL KESELURUHAN</td>
-                <td class="text-right"><?= number_format($total_debet,0,',','.'); ?></td>
-                <td class="text-right"><?= number_format($total_kredit,0,',','.'); ?></td>
-                <td class="text-right" style="background-color: #f2f2f2;"><?= number_format($total_saldo,0,',','.'); ?></td>
+                <td class="text-right"><?= $disp_debet; ?></td>
+                <td class="text-right"><?= $disp_kredit; ?></td>
+                <td class="text-right" style="background-color: #f2f2f2;"><?= $disp_saldo; ?></td>
             </tr>
         </tbody>
     </table>

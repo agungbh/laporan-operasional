@@ -1,6 +1,9 @@
 <?php
 include 'koneksi.php';
 
+// Ambil bulan dari Filter (Jika sebelumnya Word belum pakai filter, kita menyesuaikan dari index.php)
+$filter_bulan = isset($_GET['filter_bulan']) ? $_GET['filter_bulan'] : '';
+
 function imgBase64($path, $width) {
     if(file_exists($path) && is_file($path)) {
         $data = base64_encode(file_get_contents($path));
@@ -10,16 +13,18 @@ function imgBase64($path, $width) {
     return "<i style='color:red;'>[Gambar tidak ditemukan]</i>";
 }
 
-// Cari Header & Bulan Format (mm-yyyy dan mm YYYY)
-$q_head = mysqli_query($conn, "SELECT bulan_pengiriman, no_kartu FROM laporan WHERE bulan_pengiriman != '' AND no_kartu != '' LIMIT 1");
-$head_file_format = "mm-yyyy"; 
-$head_title_format = "mm YYYY"; 
+// Cari Header & Bulan Format berdasarkan Filter
+$where_clause = "";
+if($filter_bulan != ''){
+    $where_clause = "WHERE bulan_pengiriman = '$filter_bulan'";
+}
+
+$q_head = mysqli_query($conn, "SELECT bulan_pengiriman, no_kartu FROM laporan $where_clause AND no_kartu != '' LIMIT 1");
+$head_file_format = $filter_bulan != '' ? $filter_bulan : "SemuaBulan"; 
+$head_title_format = $filter_bulan != '' ? str_replace("-", " ", $filter_bulan) : "KESELURUHAN"; 
 $head_kartu = ".......................";
 
 if($r_head = mysqli_fetch_assoc($q_head)){
-    $raw_bln = $r_head['bulan_pengiriman']; // format dari DB: 06-2026
-    $head_file_format = $raw_bln;
-    $head_title_format = str_replace("-", " ", $raw_bln); // menjadi: 06 2026
     $head_kartu = $r_head['no_kartu'];
 }
 
@@ -42,7 +47,8 @@ header("Content-Disposition: attachment; filename=\"$filename\"");
         table.tabel-data, table.tabel-data th, table.tabel-data td { border: 1px solid black; }
         table.tabel-data th { background-color: #f2f2f2; padding: 6px; text-align: center; }
         table.tabel-data td { padding: 6px; vertical-align: middle; }
-        .text-center { text-align: center; } .text-right { text-align: right; }
+        .text-center { text-align: center; } 
+        .text-right { text-align: right; white-space: nowrap; }
         .page-break { page-break-before: always; }
     </style>
 </head>
@@ -57,7 +63,7 @@ header("Content-Disposition: attachment; filename=\"$filename\"");
                 <b style="font-size: 14pt; line-height: 1.5;">
                     LAPORAN DANA OPERASIONAL MOBIL B 2649 TBW<br>
                     UNIVERSITAS BINA SARANA INFORMATIKA TASIKMALAYA<br>
-                    BULAN <?= htmlspecialchars($head_title_format); ?>
+                    BULAN <?= strtoupper(htmlspecialchars($head_title_format)); ?>
                 </b>
             </td>
         </tr>
@@ -70,36 +76,47 @@ header("Content-Disposition: attachment; filename=\"$filename\"");
             <tr>
                 <th width="5%">NO</th>
                 <th width="12%">TANGGAL</th>
-                <th width="43%">KETERANGAN</th>
-                <th width="13%">DEBET</th>
-                <th width="13%">KREDIT</th>
-                <th width="14%">SALDO</th>
+                <th width="38%">KETERANGAN</th>
+                <th width="15%">DEBET</th>
+                <th width="15%">KREDIT</th>
+                <th width="15%">SALDO</th>
             </tr>
         </thead>
         <tbody>
             <?php
             $no = 1; $total_debet = 0; $total_kredit = 0;
-            $query = mysqli_query($conn, "SELECT * FROM laporan ORDER BY tanggal ASC, id ASC");
+            $q_data = "SELECT * FROM laporan $where_clause ORDER BY tanggal ASC, id ASC";
+            $query = mysqli_query($conn, $q_data);
+            
             while($row = mysqli_fetch_assoc($query)){
                 $total_debet += $row['debet'];
                 $total_kredit += $row['kredit'];
+
+                // Penambahan format "Rp. "
+                $val_debet = ($row['debet'] == 0) ? '-' : 'Rp. ' . number_format($row['debet'],0,',','.');
+                $val_kredit = ($row['kredit'] == 0) ? '-' : 'Rp. ' . number_format($row['kredit'],0,',','.');
+                $val_saldo = 'Rp. ' . number_format($row['saldo'],0,',','.');
 
                 echo "<tr>
                     <td class='text-center'>".$no++."</td>
                     <td class='text-center'>".date('d-m-Y', strtotime($row['tanggal']))."</td>
                     <td>".htmlspecialchars($row['keterangan'])."</td>
-                    <td class='text-right'>".number_format($row['debet'],0,',','.')."</td>
-                    <td class='text-right'>".number_format($row['kredit'],0,',','.')."</td>
-                    <td class='text-right'><strong>".number_format($row['saldo'],0,',','.')."</strong></td>
+                    <td class='text-right'>".$val_debet."</td>
+                    <td class='text-right'>".$val_kredit."</td>
+                    <td class='text-right'><strong>".$val_saldo."</strong></td>
                 </tr>";
             }
+            
             $total_saldo = $total_debet - $total_kredit;
+            $disp_debet = ($total_debet == 0) ? "Rp. 0" : 'Rp. ' . number_format($total_debet,0,',','.');
+            $disp_kredit = ($total_kredit == 0) ? "Rp. 0" : 'Rp. ' . number_format($total_kredit,0,',','.');
+            $disp_saldo = ($total_saldo == 0) ? "Rp. 0" : 'Rp. ' . number_format($total_saldo,0,',','.');
             ?>
             <tr style="background-color: #f9f9f9; font-weight: bold;">
                 <td colspan="3" class="text-center">TOTAL KESELURUHAN</td>
-                <td class="text-right"><?= number_format($total_debet,0,',','.'); ?></td>
-                <td class="text-right"><?= number_format($total_kredit,0,',','.'); ?></td>
-                <td class="text-right" style="background-color: #e6ffe6;"><?= number_format($total_saldo,0,',','.'); ?></td>
+                <td class="text-right"><?= $disp_debet; ?></td>
+                <td class="text-right"><?= $disp_kredit; ?></td>
+                <td class="text-right" style="background-color: #e6ffe6;"><?= $disp_saldo; ?></td>
             </tr>
         </tbody>
     </table>
@@ -122,7 +139,7 @@ header("Content-Disposition: attachment; filename=\"$filename\"");
         
         <p style="font-weight: bold;">1. Lampiran Foto Kartu Flash</p>
         <?php
-        $q_kartu = mysqli_query($conn, "SELECT foto_kartu FROM laporan WHERE foto_kartu != '' LIMIT 1");
+        $q_kartu = mysqli_query($conn, "SELECT foto_kartu FROM laporan $where_clause AND foto_kartu != '' LIMIT 1");
         if($r_kartu = mysqli_fetch_assoc($q_kartu)){
             echo imgBase64('uploads/'.$r_kartu['foto_kartu'], 350);
         } else { echo "<p><i>Tidak ada lampiran foto kartu</i></p>"; }
@@ -131,7 +148,7 @@ header("Content-Disposition: attachment; filename=\"$filename\"");
 
         <p style="font-weight: bold;">2. Lampiran Foto Saldo Kartu Flash</p>
         <?php
-        $q_saldo = mysqli_query($conn, "SELECT foto_saldo FROM laporan WHERE foto_saldo != '' LIMIT 1");
+        $q_saldo = mysqli_query($conn, "SELECT foto_saldo FROM laporan $where_clause AND foto_saldo != '' LIMIT 1");
         if($r_saldo = mysqli_fetch_assoc($q_saldo)){
             echo imgBase64('uploads/'.$r_saldo['foto_saldo'], 350);
         } else { echo "<p><i>Tidak ada lampiran foto saldo</i></p>"; }
@@ -140,7 +157,7 @@ header("Content-Disposition: attachment; filename=\"$filename\"");
 
         <p style="font-weight: bold;">3. Lampiran Struk Bensin</p>
         <?php
-        $q_struk = mysqli_query($conn, "SELECT tanggal, gambar FROM laporan WHERE gambar != '' ORDER BY tanggal ASC");
+        $q_struk = mysqli_query($conn, "SELECT tanggal, gambar FROM laporan $where_clause AND gambar != '' ORDER BY tanggal ASC");
         $ada_struk = false;
         while($r_struk = mysqli_fetch_assoc($q_struk)){
             $ada_struk = true;

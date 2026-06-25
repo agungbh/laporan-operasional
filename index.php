@@ -6,7 +6,6 @@
     <title>Laporan Dana Operasional UBSI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script>
-        // Fungsi sinkronisasi nilai Jumlah Saldo -> Debit
         function syncDebit() {
             let saldo = document.getElementById('input_jumlah_saldo').value;
             document.getElementById('input_debit_disabled').value = saldo;
@@ -98,7 +97,8 @@
                     }
                     ?>
                 </select>
-                <button type="submit" class="btn btn-warning btn-sm fw-bold text-nowrap me-2">Export Laporan ke Word</button>
+                <button type="submit" formaction="export_excel.php" class="btn btn-success btn-sm fw-bold text-nowrap me-2">Export Excel</button>
+                <button type="submit" class="btn btn-warning btn-sm fw-bold text-nowrap me-2">Export Word</button>
                 <button type="submit" formaction="export_pdf.php" class="btn btn-danger btn-sm fw-bold text-nowrap me-2">Cetak PDF</button>
                 <button type="submit" formaction="template_kirim_email.php" class="btn btn-info btn-sm fw-bold text-nowrap text-white">Template Email</button>
             </form>
